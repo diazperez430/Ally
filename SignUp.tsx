@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, 
 import { RouteProp, useRoute } from '@react-navigation/native';
 import { RootStackParamList } from './App';
 import { Ionicons } from '@expo/vector-icons';
-
-type SignUpRouteProp = RouteProp<RootStackParamList, 'Profile'>;
+import DateTimePicker from "@react-native-community/datetimepicker";
+import { useState,useEffect } from "react";
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
@@ -17,7 +17,7 @@ const scale = (size: number): number => {
   return Math.round(size * scaleFactor);
 };
 
-const moderateScale = (size: number, factor = 0.5) => {
+const moderateScale = (size: number, factor = 0.5): number => {
   return size + (scale(size) - size) * factor;
 };
 
@@ -38,6 +38,9 @@ export default function SignUp() {
   const [passwordError, setPasswordError] = React.useState('');
   const [confirmPasswordError, setConfirmPasswordError] = React.useState('');
   const [isButtonHovered, setIsButtonHovered] = React.useState(false);
+  // DateTimePicker state
+  const [date, setDate] = React.useState(new Date());
+  const [showPicker, setShowPicker] = React.useState(false);
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 10;
@@ -127,6 +130,16 @@ export default function SignUp() {
     // Placeholder for sign up logic
     alert(`First name: ${firstName}\nSurname: ${surname}\nDate of birth: ${dob}\nGender: ${gender}\nContact: ${contact}\nPassword: ${password}\nConfirm Password: ${confirmPassword}`);
   };
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowPicker(Platform.OS === 'ios'); // keep open on iOS, close on Android
+    if (selectedDate) {
+      setDate(selectedDate);
+      // Format date as DD/MM/YYYY
+      const formatted = `${selectedDate.getDate().toString().padStart(2, '0')}/${(selectedDate.getMonth()+1).toString().padStart(2, '0')}/${selectedDate.getFullYear()}`;
+      setDob(formatted);
+    }
+  };
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -178,8 +191,18 @@ export default function SignUp() {
               onChangeText={setDob}
               autoCapitalize="none"
               autoCorrect={false}
+              onPressIn={() => setShowPicker(true)}
             />
             {dobError ? <Text style={styles.errorText}>{dobError}</Text> : null}
+            {showPicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display="spinner"
+                onChange={handleDateChange}
+                maximumDate={new Date()}
+              />
+            )}
             <View style={styles.genderContainer}>
               <Text style={styles.genderLabel}>Gender:</Text>
               <View style={styles.genderOptions}>

@@ -104,7 +104,7 @@ export default function HomeScreen() {
   };
 
  return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.content}>
         <Text style={styles.title}>
           <Pressable
@@ -172,7 +172,7 @@ export default function HomeScreen() {
       <View style={styles.footbar}>
         <Text style={styles.footbarText}>© 2025 Ally</Text>
    </View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -180,7 +180,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fae7f7',
-    paddingTop: Platform.OS === 'ios' ? 0 : StatusBar.currentHeight || 0,
   },
   content: {
     flex: 1,
