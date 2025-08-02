@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, Dimensions, Alert, TouchableOpacity } from "rea
 
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from './HomeScreen';
+import LogIn from './LogIn';
 import SignUp from './SignUp';
 import Dashboard from './Dashboard';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,6 +15,7 @@ export type RootStackParamList = {
   Home: undefined;
   Profile: { name: string };
   Dashboard: undefined;
+  DashboardScreen: undefined;
 };
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -45,7 +46,7 @@ export default function App() {
       >
         <Stack.Screen 
           name="Home" 
-          component={HomeScreen}
+          component={LogIn}
           options={({ navigation }) => ({
             headerShown: true,
             title: '',
@@ -62,7 +63,7 @@ export default function App() {
                 }}
               >
                 <Ionicons
-                  name="home"
+                  name="chevron-back"
                   size={isTablet ? 32 : 28}
                   color="#fff"
                 />
@@ -80,6 +81,14 @@ export default function App() {
         />
         <Stack.Screen
           name="Dashboard"
+          component={Dashboard}
+          options={{
+            title: '',
+            headerShown: true,
+          }}
+        />
+        <Stack.Screen
+          name="DashboardScreen"
           component={Dashboard}
           options={{
             title: '',
