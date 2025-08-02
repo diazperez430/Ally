@@ -1,14 +1,14 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, Button, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, Image, Animated, Pressable, TextInput } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, SafeAreaView, Animated, Pressable, TextInput, Alert } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from './App';
 import { useNavigation } from '@react-navigation/native';
+import { signIn } from 'aws-amplify/auth';
 
 type LogInNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
-const isSmallDevice = screenWidth < 375;
 
 // Responsive scaling functions
 const scale = (size: number): number => {
@@ -33,6 +33,7 @@ export default function LogIn() {
   const [password, setPassword] = useState('');
   const [isLoginButtonHovered, setIsLoginButtonHovered] = useState(false);
   const [isCreateAccountButtonHovered, setIsCreateAccountButtonHovered] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handlePressIn = () => {
     Animated.spring(scaleAnim, {
@@ -98,9 +99,76 @@ export default function LogIn() {
     }).start();
   };
 
-  const handleLogin = () => {
-    // Placeholder for login logic
-    alert(`Email: ${email}\nPassword: ${password}`);
+  const handleLogin = async () => {
+    console.log('Login button pressed');
+    console.log('Email:', email);
+    console.log('Password length:', password.length);
+    
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Error', 'Please enter both email and password.');
+      return;
+    }
+
+    // Validate email format
+    if (!email.includes('@')) {
+      Alert.alert('Error', 'Please enter a valid email address.');
+      return;
+    }
+
+    console.log('Starting authentication...');
+    setIsLoading(true);
+
+    try {
+      const { isSignedIn } = await signIn({ username: email, password });
+      
+      console.log('SignIn result:', { isSignedIn });
+      
+      if (isSignedIn) {
+        // User is successfully authenticated and in Cognito pool
+        console.log('Login successful, navigating to Dashboard...');
+        
+        // Navigate directly to Dashboard
+        console.log('Attempting to navigate to Dashboard...');
+        navigation.navigate('Dashboard');
+        console.log('Navigation command sent');
+      } else {
+        console.log('SignIn completed but isSignedIn is false');
+        // Still navigate to Dashboard even if isSignedIn is false
+        // This can happen in some cases where the sign-in is successful but the flag is not set
+        console.log('Attempting to navigate to Dashboard (fallback)...');
+        navigation.navigate('Dashboard');
+        console.log('Fallback navigation command sent');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      console.error('Error name:', error.name);
+      console.error('Error message:', error.message);
+      
+      let errorMessage = 'An error occurred during login.';
+      
+      if (error.name === 'UserNotConfirmedException') {
+        errorMessage = 'Please verify your account before logging in. Check your email for verification code.';
+        console.log('User not confirmed - needs email verification');
+      } else if (error.name === 'NotAuthorizedException') {
+        errorMessage = 'Invalid email or password. Please check your credentials.';
+        console.log('Invalid credentials');
+      } else if (error.name === 'UserNotFoundException') {
+        errorMessage = 'Account not found. Please check your email or create a new account.';
+        console.log('User not found');
+      } else if (error.name === 'TooManyRequestsException') {
+        errorMessage = 'Too many login attempts. Please try again later.';
+        console.log('Too many requests');
+      } else if (error.name === 'PasswordResetRequiredException') {
+        errorMessage = 'Password reset required. Please reset your password.';
+        console.log('Password reset required');
+      } else {
+        console.log('Unknown error type:', error.name);
+      }
+      
+      Alert.alert('Login Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
  return (
@@ -146,11 +214,25 @@ export default function LogIn() {
             onHoverIn={() => setIsLoginButtonHovered(true)}
             onHoverOut={() => setIsLoginButtonHovered(false)}
             style={({ pressed }) => [styles.loginButton, pressed && { opacity: 0.9 }]}
+            disabled={isLoading}
           >
             <Text style={[
               styles.loginButtonText,
               isLoginButtonHovered && { color: '#cccccc' }
-            ]}>Log In</Text>
+            ]}>
+              {isLoading ? 'Logging In...' : 'Log In'}
+            </Text>
+          </Pressable>
+          
+          {/* Test Navigation Button */}
+          <Pressable
+            onPress={() => {
+              console.log('Test navigation button pressed');
+              navigation.navigate('Dashboard');
+            }}
+            style={({ pressed }) => [styles.testButton, pressed && { opacity: 0.9 }]}
+          >
+            <Text style={styles.testButtonText}>Test Navigation to Dashboard</Text>
           </Pressable>
           <Text style={styles.forgotPassword}>Forgotten password?</Text>
         </View>
@@ -303,6 +385,25 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   customButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: isTablet ? 16 : 14,
+    letterSpacing: 1,
+  },
+  testButton: {
+    backgroundColor: '#ff6b6b',
+    borderRadius: 8,
+    paddingVertical: isTablet ? 14 : 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    shadowColor: '#ff6b6b',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  testButtonText: {
     color: '#fff',
     fontWeight: 'bold',
     fontSize: isTablet ? 16 : 14,

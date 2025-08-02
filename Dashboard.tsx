@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, ScrollView, Pressable, Modal, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, ScrollView, Pressable, Modal, TouchableWithoutFeedback, Linking, Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from './App';
 import { Ionicons } from '@expo/vector-icons';
+import { signOut } from 'aws-amplify/auth';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
@@ -20,8 +21,81 @@ const moderateScale = (size: number, factor = 0.5): number => {
 };
 
 export default function Dashboard() {
+  console.log('Dashboard component rendered');
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [showLogout, setShowLogout] = useState(false);
+  const [callbackUrl, setCallbackUrl] = useState<string | null>(null);
+
+  // URL Callback functionality - triggers when login is completed and user reaches Dashboard
+  useEffect(() => {
+    const handleUrlCallback = async () => {
+      try {
+        // Get the initial URL that launched the app (if any)
+        const initialUrl = await Linking.getInitialURL();
+        
+        if (initialUrl) {
+          console.log('Initial URL detected:', initialUrl);
+          setCallbackUrl(initialUrl);
+          
+          // Parse URL parameters
+          const url = new URL(initialUrl);
+          const params = new URLSearchParams(url.search);
+          
+          // Check for authentication callback parameters
+          const authToken = params.get('auth_token');
+          const userId = params.get('user_id');
+          const redirectUrl = params.get('redirect_url');
+          
+          if (authToken || userId) {
+            console.log('Authentication callback detected');
+            Alert.alert(
+              'Login Successful',
+              'You have been successfully authenticated and redirected to the dashboard.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    // Handle successful authentication callback
+                    console.log('Authentication callback confirmed');
+                  },
+                },
+              ]
+            );
+          }
+          
+          // If there's a redirect URL, you can handle it here
+          if (redirectUrl) {
+            console.log('Redirect URL detected:', redirectUrl);
+            // You can navigate to another screen or handle the redirect
+          }
+        }
+      } catch (error) {
+        console.error('Error handling URL callback:', error);
+      }
+    };
+
+    // Handle URL callback when component mounts (indicating successful login)
+    handleUrlCallback();
+
+    // Set up listener for URL changes while app is running
+    const subscription = Linking.addEventListener('url', (event) => {
+      console.log('URL change detected:', event.url);
+      setCallbackUrl(event.url);
+      
+      // Handle deep link or callback URL
+      if (event.url) {
+        Alert.alert(
+          'URL Callback',
+          `Received callback URL: ${event.url}`,
+          [{ text: 'OK' }]
+        );
+      }
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
 
   React.useLayoutEffect(() => {
     navigation.setOptions({
@@ -35,9 +109,27 @@ export default function Dashboard() {
     });
   }, [navigation]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowLogout(false);
-    navigation.navigate('Home');
+    try {
+      await signOut();
+      navigation.navigate('Home');
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still navigate to home even if logout fails
+      navigation.navigate('Home');
+    }
+  };
+
+  const handleTestCallback = () => {
+    // Simulate a callback URL for testing
+    const testUrl = 'ally://dashboard?auth_token=test123&user_id=user456&redirect_url=https://example.com';
+    setCallbackUrl(testUrl);
+    Alert.alert(
+      'Test Callback',
+      'Simulated URL callback triggered for testing purposes.',
+      [{ text: 'OK' }]
+    );
   };
 
   return (
@@ -46,6 +138,21 @@ export default function Dashboard() {
         <View style={styles.content}>
           {/* Dashboard content goes here */}
           <Text style={styles.title}>Dashboard</Text>
+          <Text style={styles.subtitle}>Welcome to your Ally dashboard</Text>
+          <Text style={styles.debugText}>Dashboard is working!</Text>
+          
+          {/* URL Callback Status */}
+          {callbackUrl && (
+            <View style={styles.callbackContainer}>
+              <Text style={styles.callbackTitle}>URL Callback Detected</Text>
+              <Text style={styles.callbackUrl}>{callbackUrl}</Text>
+            </View>
+          )}
+          
+          {/* Test Callback Button */}
+          <Pressable style={styles.testButton} onPress={handleTestCallback}>
+            <Text style={styles.testButtonText}>Test URL Callback</Text>
+          </Pressable>
         </View>
       </ScrollView>
       <View style={styles.footbar}>
@@ -87,15 +194,77 @@ const styles = StyleSheet.create({
     paddingHorizontal: isTablet ? 60 : 20,
     paddingVertical: 40,
     alignItems: 'center',
-    justifyContent: 'flex-start',
+    justifyContent: 'center',
   },
   title: {
     textAlign: 'center',
     marginTop: isTablet ? 32 : 24,
     marginBottom: isTablet ? 32 : 24,
-    fontSize: isTablet ? 32 : 24,
+    fontSize: isTablet ? 90 : 56,
     fontWeight: 'bold',
     color: '#6426A9',
+    lineHeight: isTablet ? 100 : 64,
+    letterSpacing: 2,
+  },
+  subtitle: {
+    fontSize: isTablet ? 20 : moderateScale(16),
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: isTablet ? 48 : 32,
+    lineHeight: isTablet ? 28 : moderateScale(22),
+  },
+  debugText: {
+    fontSize: isTablet ? 16 : 14,
+    color: '#6426A9',
+    textAlign: 'center',
+    marginTop: 20,
+    fontWeight: 'bold',
+  },
+  callbackContainer: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 12,
+    padding: isTablet ? 20 : 16,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#e0d6ef',
+    shadowColor: '#6426A9',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  callbackTitle: {
+    fontSize: isTablet ? 18 : 16,
+    fontWeight: 'bold',
+    color: '#6426A9',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  callbackUrl: {
+    fontSize: isTablet ? 14 : 12,
+    color: '#666',
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  testButton: {
+    backgroundColor: '#002a2d',
+    borderRadius: 8,
+    paddingVertical: isTablet ? 14 : 12,
+    paddingHorizontal: isTablet ? 32 : 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    shadowColor: '#002a2d',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  testButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: isTablet ? 16 : 14,
+    letterSpacing: 1,
   },
   footbar: {
     width: '100%',
@@ -118,26 +287,36 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   logoutBox: {
-    backgroundColor: '#fff',
-    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 12,
     marginTop: 60,
     marginRight: 20,
-    padding: 16,
-    shadowColor: '#000',
+    padding: isTablet ? 24 : 16,
+    shadowColor: '#6426A9',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 1,
+    borderWidth: 1,
+    borderColor: '#e0d6ef',
+  },
+  logoutButton: {
+    backgroundColor: '#6426A9',
+    borderRadius: 8,
+    paddingVertical: isTablet ? 14 : 12,
+    paddingHorizontal: isTablet ? 18 : 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#6426A9',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 5,
-  },
-  logoutButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-    backgroundColor: '#6426A9',
+    elevation: 3,
   },
   logoutButtonText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: isTablet ? 16 : 14,
+    letterSpacing: 1,
   },
 });

@@ -1,14 +1,16 @@
-import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View, Dimensions, Alert, TouchableOpacity } from "react-native";
-
+import React from 'react';
+import { Dimensions, TouchableOpacity } from "react-native";
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import LogIn from './LogIn';
 import SignUp from './SignUp';
 import Dashboard from './Dashboard';
+import TodoScreen from './TodoScreen';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import { StatusBar } from "expo-status-bar";
 
+// Amplify imports
+import { withAuthenticator } from '@aws-amplify/ui-react-native';
 
 // Define type for route params
 export type RootStackParamList = {
@@ -16,19 +18,22 @@ export type RootStackParamList = {
   Profile: { name: string };
   Dashboard: undefined;
   DashboardScreen: undefined;
+  TodoScreen: undefined;
 };
 
 const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
+
 // Responsive scaling function
 const scale = (size: number): number => {
   const baseWidth = 375;
   const scaleFactor = screenWidth / baseWidth;
   return Math.round(size * scaleFactor);
 };
+
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export default function App() {
+function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator
@@ -52,7 +57,10 @@ export default function App() {
             title: '',
             headerRight: () => (
               <TouchableOpacity
-                onPress={() => navigation.navigate('Dashboard')}
+                onPress={() => {
+                  console.log('Chevron arrow pressed, navigating to Dashboard');
+                  navigation.navigate('Dashboard');
+                }}
                 style={{
                   marginRight: isTablet ? 24 : 16,
                   padding: isTablet ? scale(8) : 12,
@@ -63,7 +71,7 @@ export default function App() {
                 }}
               >
                 <Ionicons
-                  name="chevron-back"
+                  name="chevron-forward"
                   size={isTablet ? 32 : 28}
                   color="#fff"
                 />
@@ -75,7 +83,7 @@ export default function App() {
           name="Profile" 
           component={SignUp}
           options={{
-            title: '', // Remove Sign Up from the topbar
+            title: '',
             headerShown: true,
           }}
         />
@@ -95,10 +103,19 @@ export default function App() {
             headerShown: true,
           }}
         />
+        <Stack.Screen
+          name="TodoScreen"
+          component={TodoScreen}
+          options={{
+            title: 'Todo List',
+            headerShown: true,
+          }}
+        />
       </Stack.Navigator>
       <StatusBar style="light" />
     </NavigationContainer>
   );
 }
 
+export default App;
 

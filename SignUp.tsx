@@ -1,14 +1,15 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, ScrollView, Animated, Pressable, TextInput } from 'react-native';
-import { RouteProp, useRoute } from '@react-navigation/native';
+import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, ScrollView, Animated, Pressable, TextInput, Alert } from 'react-native';
+import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from './App';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from "@react-native-community/datetimepicker";
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
+import { signUp, confirmSignUp, signIn } from 'aws-amplify/auth';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
-const isSmallDevice = screenWidth < 375;
 
 // Responsive scaling functions
 const scale = (size: number): number => {
@@ -21,13 +22,17 @@ const moderateScale = (size: number, factor = 0.5): number => {
   return size + (scale(size) - size) * factor;
 };
 
+type SignUpNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Profile'>;
+
 export default function SignUp() {
+  const navigation = useNavigation<SignUpNavigationProp>();
   const allyScaleAnim = React.useRef(new Animated.Value(1)).current;
   const [firstName, setFirstName] = React.useState('');
   const [surname, setSurname] = React.useState('');
   const [dob, setDob] = React.useState('');
   const [gender, setGender] = React.useState('');
   const [contact, setContact] = React.useState('');
+  const [phoneNumber, setPhoneNumber] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   const [firstNameError, setFirstNameError] = React.useState('');
@@ -35,12 +40,21 @@ export default function SignUp() {
   const [dobError, setDobError] = React.useState('');
   const [genderError, setGenderError] = React.useState('');
   const [contactError, setContactError] = React.useState('');
+  const [phoneError, setPhoneError] = React.useState('');
   const [passwordError, setPasswordError] = React.useState('');
   const [confirmPasswordError, setConfirmPasswordError] = React.useState('');
   const [isButtonHovered, setIsButtonHovered] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(false);
   // DateTimePicker state
   const [date, setDate] = React.useState(new Date());
   const [showPicker, setShowPicker] = React.useState(false);
+  // Verification state
+  const [showVerification, setShowVerification] = React.useState(false);
+  const [verificationCode, setVerificationCode] = React.useState('');
+  const [verificationError, setVerificationError] = React.useState('');
+  const [isVerifying, setIsVerifying] = React.useState(false);
+  const [isCheckingVerification, setIsCheckingVerification] = React.useState(false);
+  const [signUpUsername, setSignUpUsername] = React.useState('');
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 10;
@@ -66,13 +80,15 @@ export default function SignUp() {
       friction: 5,
     }).start();
   };
-  const handleSignUp = () => {
+
+  const handleSignUp = async () => {
     // Reset all errors
     setFirstNameError('');
     setSurnameError('');
     setDobError('');
     setGenderError('');
     setContactError('');
+    setPhoneError('');
     setPasswordError('');
     setConfirmPasswordError('');
 
@@ -100,7 +116,16 @@ export default function SignUp() {
     }
 
     if (!contact.trim()) {
-      setContactError('Enter Mobile number or email');
+      setContactError('Enter your email address');
+      hasErrors = true;
+    } else if (!contact.includes('@')) {
+      setContactError('Please enter a valid email address');
+      hasErrors = true;
+    }
+
+    // Phone number is optional, but if provided, validate format
+    if (phoneNumber.trim() && !phoneNumber.startsWith('+61')) {
+      setPhoneError('Please enter a valid Australian phone number (+61 format)');
       hasErrors = true;
     }
 
@@ -127,8 +152,57 @@ export default function SignUp() {
       return;
     }
 
-    // Placeholder for sign up logic
-    alert(`First name: ${firstName}\nSurname: ${surname}\nDate of birth: ${dob}\nGender: ${gender}\nContact: ${contact}\nPassword: ${password}\nConfirm Password: ${confirmPassword}`);
+    setIsLoading(true);
+
+    try {
+      // Use email as the primary identifier for Cognito
+      const username = contact; // Email will be the username
+      
+      const signUpResult = await signUp({
+        username,
+        password,
+        options: {
+          userAttributes: {
+            email: contact, // Email is required
+            phone_number: phoneNumber.trim() || undefined, // Phone is optional
+            given_name: firstName,
+            family_name: surname,
+          },
+          autoSignIn: true,
+        },
+      });
+
+      // Store the username for verification
+      setSignUpUsername(username);
+      setShowVerification(true);
+      
+      Alert.alert(
+        'Verification Required',
+        'Your account has been created successfully! Please check your email for a verification code to complete your registration.',
+        [
+          {
+            text: 'OK',
+            onPress: () => {}, // Don't navigate, stay on the form
+          },
+        ]
+      );
+    } catch (error: any) {
+      console.error('Sign up error:', error);
+      
+      let errorMessage = 'An error occurred during sign up.';
+      
+      if (error.name === 'UsernameExistsException') {
+        errorMessage = 'An account with this email/phone already exists.';
+      } else if (error.name === 'InvalidPasswordException') {
+        errorMessage = 'Password does not meet requirements.';
+      } else if (error.name === 'InvalidParameterException') {
+        errorMessage = 'Please check your input and try again.';
+      }
+      
+      Alert.alert('Sign Up Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
@@ -138,6 +212,105 @@ export default function SignUp() {
       // Format date as DD/MM/YYYY
       const formatted = `${selectedDate.getDate().toString().padStart(2, '0')}/${(selectedDate.getMonth()+1).toString().padStart(2, '0')}/${selectedDate.getFullYear()}`;
       setDob(formatted);
+    }
+  };
+
+  const handleVerification = async () => {
+    if (!verificationCode.trim()) {
+      setVerificationError('Please enter the verification code');
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerificationError('');
+
+    try {
+      await confirmSignUp({
+        username: signUpUsername,
+        confirmationCode: verificationCode.trim(),
+      });
+
+      // Show loading message while checking verification status
+      setIsCheckingVerification(true);
+      Alert.alert(
+        'Verifying Account',
+        'Please wait while we verify your account status in the system...',
+        [],
+        { cancelable: false }
+      );
+
+      // Wait a moment to ensure Cognito has processed the verification
+      setTimeout(async () => {
+        try {
+          // Try to sign in to verify the account is active
+          await signIn({ username: signUpUsername, password: '' });
+        } catch (signInError: any) {
+          // If signIn fails with NotAuthorizedException, it means the account is verified but password is wrong
+          // If it fails with UserNotConfirmedException, the account is not yet verified
+          if (signInError.name === 'NotAuthorizedException') {
+            // Account is verified and active
+            Alert.alert(
+              '🎉 Congratulations!',
+              'You have created your Ally account! Click below to log in.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    setShowVerification(false);
+                    setVerificationCode('');
+                    setSignUpUsername('');
+                    setIsCheckingVerification(false);
+                    navigation.navigate('Home'); // Navigate to LogIn.tsx
+                  },
+                },
+              ]
+            );
+          } else if (signInError.name === 'UserNotConfirmedException') {
+            // Account is not yet verified
+            Alert.alert(
+              'Verification Pending',
+              'Your account verification is still being processed. Please wait a moment and try again.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    setIsCheckingVerification(false);
+                  },
+                },
+              ]
+            );
+          } else {
+            // Other error
+            Alert.alert(
+              'Verification Error',
+              'There was an issue verifying your account. Please try again.',
+              [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    setIsCheckingVerification(false);
+                  },
+                },
+              ]
+            );
+          }
+        }
+      }, 2000); // Wait 2 seconds for Cognito to process
+
+    } catch (error: any) {
+      console.error('Verification error:', error);
+      
+      let errorMessage = 'An error occurred during verification.';
+      
+      if (error.name === 'CodeMismatchException') {
+        errorMessage = 'Wrong code. Please check your email and try again.';
+      } else if (error.name === 'NotAuthorizedException') {
+        errorMessage = 'Account is already confirmed or verification is not required.';
+      }
+      
+      setVerificationError(errorMessage);
+    } finally {
+      setIsVerifying(false);
     }
   };
   return (
@@ -235,7 +408,7 @@ export default function SignUp() {
             {genderError ? <Text style={styles.errorText}>{genderError}</Text> : null}
             <TextInput
               style={styles.input}
-              placeholder="Mobile number or email"
+              placeholder="Enter your email address"
               placeholderTextColor="#999"
               value={contact}
               onChangeText={setContact}
@@ -244,6 +417,17 @@ export default function SignUp() {
               keyboardType="email-address"
             />
             {contactError ? <Text style={styles.errorText}>{contactError}</Text> : null}
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your phone number (optional)"
+              placeholderTextColor="#999"
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="phone-pad"
+            />
+            {phoneError ? <Text style={styles.errorText}>{phoneError}</Text> : null}
             <View style={styles.passwordContainer}>
               <TextInput
                 style={styles.passwordInput}
@@ -275,12 +459,46 @@ export default function SignUp() {
               onHoverIn={() => setIsButtonHovered(true)}
               onHoverOut={() => setIsButtonHovered(false)}
               style={({ pressed }) => [styles.signupButton, pressed && { opacity: 0.9 }]}
+              disabled={isLoading}
             >
               <Text style={[
                 styles.signupButtonText,
                 isButtonHovered && { color: '#cccccc' }
-              ]}>Sign up</Text>
+              ]}>
+                {isLoading ? 'Signing Up...' : 'Sign up'}
+              </Text>
             </Pressable>
+
+            {/* Verification Section */}
+            {showVerification && (
+              <View style={styles.verificationContainer}>
+                <Text style={styles.verificationTitle}>Enter Verification Code</Text>
+                <Text style={styles.verificationSubtitle}>
+                  Please enter the verification code sent to your email address.
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter verification code"
+                  placeholderTextColor="#999"
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                />
+                {verificationError ? <Text style={styles.errorText}>{verificationError}</Text> : null}
+                <Pressable
+                  onPress={handleVerification}
+                  style={({ pressed }) => [styles.signupButton, pressed && { opacity: 0.9 }]}
+                  disabled={isVerifying || isCheckingVerification}
+                >
+                  <Text style={styles.signupButtonText}>
+                    {isVerifying ? 'Verifying...' : isCheckingVerification ? 'Checking Status...' : 'Verify Code'}
+                  </Text>
+                </Pressable>
+              </View>
+            )}
           </View>
         </View>
       </ScrollView>
@@ -525,5 +743,26 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 8,
     marginLeft: 4,
+  },
+  verificationContainer: {
+    marginTop: 24,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: '#e0d6ef',
+    width: '100%',
+  },
+  verificationTitle: {
+    fontSize: isTablet ? 20 : 18,
+    fontWeight: 'bold',
+    color: '#6426A9',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  verificationSubtitle: {
+    fontSize: isTablet ? 14 : 12,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: isTablet ? 20 : 16,
   },
 }); 
