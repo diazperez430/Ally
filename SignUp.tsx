@@ -5,7 +5,7 @@ import { RootStackParamList } from './App';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { useState, useEffect } from "react";
-import { signUp, confirmSignUp, signIn } from 'aws-amplify/auth';
+import { signUp, confirmSignUp } from 'aws-amplify/auth';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -55,6 +55,7 @@ export default function SignUp() {
   const [isVerifying, setIsVerifying] = React.useState(false);
   const [isCheckingVerification, setIsCheckingVerification] = React.useState(false);
   const [signUpUsername, setSignUpUsername] = React.useState('');
+  const [signUpPassword, setSignUpPassword] = React.useState(''); // Store password for sign-in after verification
 
   const validatePassword = (password: string) => {
     const minLength = password.length >= 10;
@@ -172,8 +173,9 @@ export default function SignUp() {
         },
       });
 
-      // Store the username for verification
+      // Store the username and password for verification and sign-in
       setSignUpUsername(username);
+      setSignUpPassword(password);
       setShowVerification(true);
       
       Alert.alert(
@@ -230,72 +232,29 @@ export default function SignUp() {
         confirmationCode: verificationCode.trim(),
       });
 
-      // Show loading message while checking verification status
+      // Check verification status silently
       setIsCheckingVerification(true);
-      Alert.alert(
-        'Verifying Account',
-        'Please wait while we verify your account status in the system...',
-        [],
-        { cancelable: false }
-      );
 
-      // Wait a moment to ensure Cognito has processed the verification
-      setTimeout(async () => {
-        try {
-          // Try to sign in to verify the account is active
-          await signIn({ username: signUpUsername, password: '' });
-        } catch (signInError: any) {
-          // If signIn fails with NotAuthorizedException, it means the account is verified but password is wrong
-          // If it fails with UserNotConfirmedException, the account is not yet verified
-          if (signInError.name === 'NotAuthorizedException') {
-            // Account is verified and active
-            Alert.alert(
-              '🎉 Congratulations!',
-              'You have created your Ally account! Click below to log in.',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    setShowVerification(false);
-                    setVerificationCode('');
-                    setSignUpUsername('');
-                    setIsCheckingVerification(false);
-                    navigation.navigate('Home'); // Navigate to LogIn.tsx
-                  },
-                },
-              ]
-            );
-          } else if (signInError.name === 'UserNotConfirmedException') {
-            // Account is not yet verified
-            Alert.alert(
-              'Verification Pending',
-              'Your account verification is still being processed. Please wait a moment and try again.',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    setIsCheckingVerification(false);
-                  },
-                },
-              ]
-            );
-          } else {
-            // Other error
-            Alert.alert(
-              'Verification Error',
-              'There was an issue verifying your account. Please try again.',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    setIsCheckingVerification(false);
-                  },
-                },
-              ]
-            );
+      // Account verified successfully - show congratulations and navigate to login
+      console.log('✅ User verification successful for:', signUpUsername);
+      console.log('✅ User status in Cognito: CONFIRMED');
+      
+      setShowVerification(false);
+      setVerificationCode('');
+      setSignUpUsername('');
+      setSignUpPassword('');
+      setIsCheckingVerification(false);
+      
+      Alert.alert(
+        '🎉 Congratulations!',
+        'You have created your Ally account! Click below to log in.',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('Home')
           }
-        }
-      }, 2000); // Wait 2 seconds for Cognito to process
+        ]
+      );
 
     } catch (error: any) {
       console.error('Verification error:', error);

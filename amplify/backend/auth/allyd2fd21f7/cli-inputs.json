@@ -33,6 +33,23 @@
     ],
     "userpoolClientLambdaRole": "allyd2d2fd21f7_userpoolclient_lambda_role",
     "userpoolClientSetAttributes": false,
+    "userpoolClientAllowedOAuthFlows": [
+      "code"
+    ],
+    "userpoolClientAllowedOAuthScopes": [
+      "email",
+      "openid",
+      "profile"
+    ],
+    "userpoolClientCallbackURLs": [
+      "ally://dashboard",
+      "ally://dashboard/",
+      "ally://dashboard?*"
+    ],
+    "userpoolClientLogoutURLs": [
+      "ally://login",
+      "ally://home"
+    ],
     "sharedId": "d2fd21f7",
     "resourceName": "allyd2fd21f7",
     "authSelections": "identityPoolAndUserPool",

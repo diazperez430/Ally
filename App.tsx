@@ -6,6 +6,8 @@ import LogIn from './LogIn';
 import SignUp from './SignUp';
 import Dashboard from './Dashboard';
 import TodoScreen from './TodoScreen';
+import OAuthHandler from './OAuthHandler';
+import TestAuth from './TestAuth';
 import { Ionicons } from '@expo/vector-icons';
 import { StatusBar } from "expo-status-bar";
 
@@ -19,6 +21,8 @@ export type RootStackParamList = {
   Dashboard: undefined;
   DashboardScreen: undefined;
   TodoScreen: undefined;
+  OAuthHandler: undefined;
+  TestAuth: undefined;
 };
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -109,6 +113,28 @@ function App() {
           options={{
             title: 'Todo List',
             headerShown: true,
+          }}
+        />
+        <Stack.Screen
+          name="OAuthHandler"
+          component={OAuthHandler}
+          options={{
+            title: 'Authentication',
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="TestAuth"
+          component={TestAuth}
+          options={{
+            title: 'Test Authentication',
+            headerStyle: {
+              backgroundColor: '#6426A9',
+            },
+            headerTintColor: '#fff',
+            headerTitleStyle: {
+              fontWeight: 'bold',
+            },
           }}
         />
       </Stack.Navigator>

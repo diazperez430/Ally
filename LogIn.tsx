@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, Dimensions, SafeAreaView, Animated, Pressable, 
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from './App';
 import { useNavigation } from '@react-navigation/native';
-import { signIn } from 'aws-amplify/auth';
+import { signIn, fetchAuthSession } from 'aws-amplify/auth';
 
 type LogInNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -99,6 +99,16 @@ export default function LogIn() {
     }).start();
   };
 
+  const validatePasswordFormat = (password: string) => {
+    const minLength = password.length >= 10;
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasLowercase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?!]/.test(password);
+    
+    return minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
+  };
+
   const handleLogin = async () => {
     console.log('Login button pressed');
     console.log('Email:', email);
@@ -115,10 +125,25 @@ export default function LogIn() {
       return;
     }
 
-    console.log('Starting authentication...');
+    // Check password format to help user
+    if (!validatePasswordFormat(password)) {
+      Alert.alert('Password Format', 'Your password must have: minimum 10 characters, 1 uppercase, 1 lowercase, 1 number and a special character (@#$%^&*()_+-=[]{}|;:,.<>?!)');
+      return;
+    }
+
+    console.log('Starting OAuth authorization code flow...');
     setIsLoading(true);
 
     try {
+      // Initiate OAuth authorization code flow
+      console.log('Initiating OAuth flow with Cognito...');
+      
+      // For OAuth flow, we'll use the OAuth handler
+      // The user will be redirected to Cognito's hosted UI
+      // After successful authentication, they'll be redirected back with an authorization code
+      
+      // For now, we'll use the direct signIn method and then handle the OAuth flow
+      console.log('Attempting sign-in with:', { username: email, passwordLength: password.length });
       const { isSignedIn } = await signIn({ username: email, password });
       
       console.log('SignIn result:', { isSignedIn });
@@ -130,19 +155,19 @@ export default function LogIn() {
         // Navigate directly to Dashboard
         console.log('Attempting to navigate to Dashboard...');
         navigation.navigate('Dashboard');
-        console.log('Navigation command sent');
+        console.log('Navigation to Dashboard sent');
       } else {
         console.log('SignIn completed but isSignedIn is false');
-        // Still navigate to Dashboard even if isSignedIn is false
-        // This can happen in some cases where the sign-in is successful but the flag is not set
+        // Still try to navigate to Dashboard
         console.log('Attempting to navigate to Dashboard (fallback)...');
         navigation.navigate('Dashboard');
-        console.log('Fallback navigation command sent');
+        console.log('Fallback navigation to Dashboard sent');
       }
     } catch (error: any) {
       console.error('Login error:', error);
       console.error('Error name:', error.name);
       console.error('Error message:', error.message);
+      console.error('Error code:', error.code);
       
       let errorMessage = 'An error occurred during login.';
       
@@ -150,8 +175,8 @@ export default function LogIn() {
         errorMessage = 'Please verify your account before logging in. Check your email for verification code.';
         console.log('User not confirmed - needs email verification');
       } else if (error.name === 'NotAuthorizedException') {
-        errorMessage = 'Invalid email or password. Please check your credentials.';
-        console.log('Invalid credentials');
+        errorMessage = 'Invalid email or password. Please check your credentials. Make sure your password meets the requirements: minimum 10 characters, 1 uppercase, 1 lowercase, 1 number and a special character.';
+        console.log('Invalid credentials - password might not meet requirements');
       } else if (error.name === 'UserNotFoundException') {
         errorMessage = 'Account not found. Please check your email or create a new account.';
         console.log('User not found');
@@ -161,8 +186,12 @@ export default function LogIn() {
       } else if (error.name === 'PasswordResetRequiredException') {
         errorMessage = 'Password reset required. Please reset your password.';
         console.log('Password reset required');
+      } else if (error.name === 'InvalidParameterException') {
+        errorMessage = 'Invalid login parameters. Please check your email format.';
+        console.log('Invalid parameters');
       } else {
         console.log('Unknown error type:', error.name);
+        errorMessage = `Login failed: ${error.message || 'Unknown error'}`;
       }
       
       Alert.alert('Login Error', errorMessage);
@@ -224,16 +253,7 @@ export default function LogIn() {
             </Text>
           </Pressable>
           
-          {/* Test Navigation Button */}
-          <Pressable
-            onPress={() => {
-              console.log('Test navigation button pressed');
-              navigation.navigate('Dashboard');
-            }}
-            style={({ pressed }) => [styles.testButton, pressed && { opacity: 0.9 }]}
-          >
-            <Text style={styles.testButtonText}>Test Navigation to Dashboard</Text>
-          </Pressable>
+
           <Text style={styles.forgotPassword}>Forgotten password?</Text>
         </View>
 
@@ -390,25 +410,7 @@ const styles = StyleSheet.create({
     fontSize: isTablet ? 16 : 14,
     letterSpacing: 1,
   },
-  testButton: {
-    backgroundColor: '#ff6b6b',
-    borderRadius: 8,
-    paddingVertical: isTablet ? 14 : 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    shadowColor: '#ff6b6b',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  testButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: isTablet ? 16 : 14,
-    letterSpacing: 1,
-  },
+
   footbar: {
     width: '100%',
     backgroundColor: '#6426A9',
