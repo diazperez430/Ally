@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, ScrollView, Animated, Pressable, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, ScrollView, Animated, Pressable, TextInput, Alert, Vibration } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from './App';
 import { Ionicons } from '@expo/vector-icons';
@@ -65,6 +65,11 @@ export default function SignUp() {
     const hasSpecialChar = /[@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?!]/.test(password);
     
     return minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
+  };
+
+  const triggerErrorVibration = () => {
+    // Stronger vibration pattern: longer vibration, pause, longer vibration (error pattern)
+    Vibration.vibrate([200, 300, 200]);
   };
 
   const handleAllyPressIn = () => {
@@ -150,6 +155,8 @@ export default function SignUp() {
     }
 
     if (hasErrors) {
+      // Trigger vibration when there are validation errors
+      triggerErrorVibration();
       return;
     }
 
@@ -202,6 +209,7 @@ export default function SignUp() {
       }
       
       Alert.alert('Sign Up Error', errorMessage);
+      triggerErrorVibration(); // Vibrate for sign-up API error
     } finally {
       setIsLoading(false);
     }
@@ -220,6 +228,7 @@ export default function SignUp() {
   const handleVerification = async () => {
     if (!verificationCode.trim()) {
       setVerificationError('Please enter the verification code');
+      triggerErrorVibration(); // Vibrate for verification error
       return;
     }
 
@@ -268,6 +277,7 @@ export default function SignUp() {
       }
       
       setVerificationError(errorMessage);
+      triggerErrorVibration(); // Vibrate for verification API error
     } finally {
       setIsVerifying(false);
     }

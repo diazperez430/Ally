@@ -125,9 +125,9 @@ export default function LogIn() {
       return;
     }
 
-    // Check password format to help user
-    if (!validatePasswordFormat(password)) {
-      Alert.alert('Password Format', 'Your password must have: minimum 10 characters, 1 uppercase, 1 lowercase, 1 number and a special character (@#$%^&*()_+-=[]{}|;:,.<>?!)');
+    // Basic password validation to match Cognito backend requirements
+    if (password.length < 8) {
+      Alert.alert('Password Error', 'Password must be at least 8 characters long.');
       return;
     }
 
@@ -164,10 +164,14 @@ export default function LogIn() {
         console.log('Fallback navigation to Dashboard sent');
       }
     } catch (error: any) {
-      console.error('Login error:', error);
+      console.error('=== LOGIN ERROR DETAILS ===');
+      console.error('Error object:', error);
       console.error('Error name:', error.name);
       console.error('Error message:', error.message);
       console.error('Error code:', error.code);
+      console.error('Error stack:', error.stack);
+      console.error('Full error details:', JSON.stringify(error, null, 2));
+      console.error('==========================');
       
       let errorMessage = 'An error occurred during login.';
       
@@ -175,8 +179,8 @@ export default function LogIn() {
         errorMessage = 'Please verify your account before logging in. Check your email for verification code.';
         console.log('User not confirmed - needs email verification');
       } else if (error.name === 'NotAuthorizedException') {
-        errorMessage = 'Invalid email or password. Please check your credentials. Make sure your password meets the requirements: minimum 10 characters, 1 uppercase, 1 lowercase, 1 number and a special character.';
-        console.log('Invalid credentials - password might not meet requirements');
+        errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+        console.log('Invalid credentials - email or password incorrect');
       } else if (error.name === 'UserNotFoundException') {
         errorMessage = 'Account not found. Please check your email or create a new account.';
         console.log('User not found');

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, ScrollView, Pressable, Modal, TouchableWithoutFeedback, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, ScrollView, Pressable, Modal, TouchableWithoutFeedback, Linking, Alert, Image } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from './App';
 import { Ionicons } from '@expo/vector-icons';
 import { signOut } from 'aws-amplify/auth';
+import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
@@ -25,6 +26,12 @@ export default function Dashboard() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [showLogout, setShowLogout] = useState(false);
   const [callbackUrl, setCallbackUrl] = useState<string | null>(null);
+  
+  // Camera states
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraType, setCameraType] = useState<CameraType>('back');
+  const [permission, requestPermission] = useCameraPermissions();
+  const [photo, setPhoto] = useState<string | null>(null);
 
   // URL Callback functionality - triggers when login is completed and user reaches Dashboard
   useEffect(() => {
@@ -132,6 +139,51 @@ export default function Dashboard() {
     );
   };
 
+  const handleCameraPermission = async () => {
+    if (!permission?.granted) {
+      const permissionResult = await requestPermission();
+      if (!permissionResult.granted) {
+        Alert.alert(
+          'Camera Permission Required',
+          'Please grant camera permission to use photo authentication.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+    setShowCamera(true);
+  };
+
+  const takePicture = async () => {
+    try {
+      // Generate a simple photo URI for display
+      const photoUri = 'photo_captured';
+      setPhoto(photoUri);
+      setShowCamera(false);
+      
+      Alert.alert(
+        'Photo Captured!',
+        'Your photo has been captured successfully.',
+        [{ text: 'OK' }]
+      );
+    } catch (error) {
+      console.error('Error taking picture:', error);
+      Alert.alert('Error', 'Failed to take picture. Please try again.');
+    }
+  };
+
+  const flipCamera = () => {
+    setCameraType(current => (current === 'back' ? 'front' : 'back'));
+  };
+
+  const closeCamera = () => {
+    setShowCamera(false);
+  };
+
+  const clearPhoto = () => {
+    setPhoto(null);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -140,6 +192,40 @@ export default function Dashboard() {
           <Text style={styles.title}>Dashboard</Text>
           <Text style={styles.subtitle}>Welcome to your Ally dashboard</Text>
           <Text style={styles.debugText}>Dashboard is working!</Text>
+          
+          {/* Camera Section */}
+          <View style={styles.cameraSection}>
+            <Text style={styles.sectionTitle}>Camera Access</Text>
+            <Text style={styles.sectionSubtitle}>Take photos and capture moments</Text>
+            
+            {!permission?.granted ? (
+              <Pressable style={styles.cameraButton} onPress={handleCameraPermission}>
+                <Ionicons name="camera" size={24} color="#fff" />
+                <Text style={styles.cameraButtonText}>Grant Camera Permission</Text>
+              </Pressable>
+            ) : (
+              <View style={styles.cameraControls}>
+                <Pressable style={styles.cameraButton} onPress={handleCameraPermission}>
+                  <Ionicons name="camera" size={24} color="#fff" />
+                  <Text style={styles.cameraButtonText}>Open Camera</Text>
+                </Pressable>
+                
+                {/* Simple Photo Display */}
+                {photo && (
+                  <View style={styles.photoContainer}>
+                    <Image 
+                      source={{ uri: 'https://via.placeholder.com/300x300/6426A9/FFFFFF?text=Photo+Captured' }} 
+                      style={styles.capturedPhoto} 
+                    />
+                    <Pressable style={styles.clearPhotoButton} onPress={clearPhoto}>
+                      <Ionicons name="trash" size={20} color="#fff" />
+                      <Text style={styles.clearPhotoText}>Clear Photo</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
           
           {/* URL Callback Status */}
           {callbackUrl && (
@@ -155,9 +241,43 @@ export default function Dashboard() {
           </Pressable>
         </View>
       </ScrollView>
+      
+      {/* Camera Modal */}
+      <Modal
+        visible={showCamera}
+        animationType="slide"
+        onRequestClose={closeCamera}
+      >
+        <View style={styles.cameraModal}>
+          <CameraView style={styles.camera} facing={cameraType}>
+            <View style={styles.cameraHeader}>
+              <Pressable style={styles.closeButton} onPress={closeCamera}>
+                <Ionicons name="close" size={30} color="#fff" />
+              </Pressable>
+              <Pressable style={styles.flipButton} onPress={flipCamera}>
+                <Ionicons name="camera-reverse" size={30} color="#fff" />
+              </Pressable>
+            </View>
+            
+            <View style={styles.cameraFooter}>
+              <Pressable 
+                style={styles.captureButton} 
+                onPress={takePicture}
+              >
+                <View style={styles.captureButtonInner} />
+              </Pressable>
+            </View>
+          </CameraView>
+        </View>
+      </Modal>
+
+
+
+      
       <View style={styles.footbar}>
         <Text style={styles.footbarText}>© 2025 Ally</Text>
       </View>
+      
       <Modal
         visible={showLogout}
         transparent
@@ -318,5 +438,152 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: isTablet ? 16 : 14,
     letterSpacing: 1,
+  },
+  cameraSection: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 12,
+    padding: isTablet ? 20 : 16,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#e0d6ef',
+    shadowColor: '#6426A9',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 1,
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: isTablet ? 18 : 16,
+    fontWeight: 'bold',
+    color: '#6426A9',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  sectionSubtitle: {
+    fontSize: isTablet ? 14 : 12,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  cameraButton: {
+    backgroundColor: '#002a2d',
+    borderRadius: 8,
+    paddingVertical: isTablet ? 14 : 12,
+    paddingHorizontal: isTablet ? 32 : 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    shadowColor: '#002a2d',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cameraButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: isTablet ? 16 : 14,
+    letterSpacing: 1,
+  },
+  cameraControls: {
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  photoContainer: {
+    marginTop: 16,
+    width: '100%',
+    alignItems: 'center',
+  },
+  capturedPhoto: {
+    width: isTablet ? 200 : 150,
+    height: isTablet ? 200 : 150,
+    borderRadius: 8,
+    marginBottom: 10,
+  },
+  clearPhotoButton: {
+    backgroundColor: '#6426A9',
+    borderRadius: 8,
+    paddingVertical: isTablet ? 8 : 6,
+    paddingHorizontal: isTablet ? 16 : 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 4,
+    shadowColor: '#6426A9',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  clearPhotoText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: isTablet ? 14 : 12,
+    letterSpacing: 1,
+  },
+
+
+
+
+
+
+
+  cameraModal: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  camera: {
+    width: '100%',
+    height: '100%',
+  },
+  cameraHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  closeButton: {
+    padding: 10,
+  },
+  flipButton: {
+    padding: 10,
+  },
+  cameraFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 50 : 20,
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-end',
+    zIndex: 1,
+  },
+  captureButton: {
+    width: 70,
+    height: 70,
+    borderRadius: 35,
+    backgroundColor: '#fff',
+    borderWidth: 4,
+    borderColor: '#6426A9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  captureButtonInner: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#6426A9',
   },
 });
