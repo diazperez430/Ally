@@ -9,9 +9,8 @@ import {
   ScrollView,
   Dimensions
 } from 'react-native';
-import { generateClient } from 'aws-amplify/api';
-import { createTodo } from './src/graphql/mutations';
-import { listTodos } from './src/graphql/queries';
+// Using a simple REST API instead of Amplify's GraphQL client
+
 
 const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
@@ -34,7 +33,8 @@ interface FormState {
 }
 
 const initialState: FormState = { name: '', description: '' };
-const client = generateClient();
+// Replace GraphQL client with a REST endpoint
+const API_URL = 'https://example.com/todos';
 
 const TodoScreen = () => {
   const [formState, setFormState] = useState<FormState>(initialState);
@@ -50,11 +50,9 @@ const TodoScreen = () => {
 
   async function fetchTodos() {
     try {
-      const todoData = await client.graphql({
-        query: listTodos
-      });
-      const todos = todoData.data.listTodos.items;
-      setTodos(todos);
+      const response = await fetch(API_URL);
+      const data: Todo[] = await response.json();
+      setTodos(data);
     } catch (err) {
       console.log('error fetching todos:', err);
     }
@@ -66,11 +64,12 @@ const TodoScreen = () => {
       const todo = { ...formState };
       setTodos([...todos, todo]);
       setFormState(initialState);
-      await client.graphql({
-        query: createTodo,
-        variables: {
-          input: todo
-        }
+      await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(todo),
       });
       // Refresh the list after adding
       fetchTodos();
