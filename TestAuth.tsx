@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from './App';
 import { fetchAuthSession, signIn, signOut, getCurrentUser } from 'aws-amplify/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type TestAuthNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -47,12 +48,26 @@ export default function TestAuth() {
       setIsLoading(true);
       
       // Test with a known user (you'll need to create this user first)
-      const { isSignedIn } = await signIn({ 
-        username: 'test@example.com', 
-        password: 'TestPassword123!' 
+      const { isSignedIn } = await signIn({
+        username: 'test@example.com',
+        password: 'TestPassword123!'
       });
-      
-      Alert.alert('Sign In Result', `isSignedIn: ${isSignedIn}`);
+
+      let tokenSnippet = 'N/A';
+      if (isSignedIn) {
+        const session = await fetchAuthSession();
+        const idToken = session.tokens?.idToken?.toString();
+        if (idToken) {
+          tokenSnippet = idToken.substring(0, 20) + '...';
+          try {
+            await AsyncStorage.setItem('idToken', idToken);
+          } catch (err) {
+            console.error('Error storing ID token:', err);
+          }
+        }
+      }
+
+      Alert.alert('Sign In Result', `isSignedIn: ${isSignedIn}\nToken: ${tokenSnippet}`);
       await checkAuthStatus();
     } catch (error: any) {
       Alert.alert('Sign In Error', error.message || 'Unknown error');

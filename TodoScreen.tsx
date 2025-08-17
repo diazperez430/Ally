@@ -47,8 +47,7 @@ const TodoScreen = () => {
 
   async function fetchTodos() {
     try {
-      const todoData: Todo[] = await API.get('restapi', '/todos');
-      setTodos(todoData);
+
     } catch (err) {
       console.log('error fetching todos:', err);
     }
@@ -58,11 +57,9 @@ const TodoScreen = () => {
     try {
       if (!formState.name || !formState.description) return;
       const todo = { ...formState };
-      setTodos([...todos, todo]);
+      await API.post('TodoAPI', '/todos', { body: todo });
       setFormState(initialState);
-      await API.post('restapi', '/todos', {
-        body: todo
-      });
+
       // Refresh the list after adding
       fetchTodos();
     } catch (err) {
