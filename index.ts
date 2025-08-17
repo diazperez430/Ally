@@ -12,7 +12,7 @@ if (typeof global.localStorage === 'undefined') {
 
 // Amplify configuration - must be at the top
 import { Amplify } from 'aws-amplify';
-import awsconfig from './src/aws-exports.js';
+import awsconfig from './src/aws-exports';
 
 try {
   console.log('Attempting to configure Amplify...');

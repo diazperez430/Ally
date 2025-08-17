@@ -32,6 +32,7 @@ interface FormState {
 }
 
 const initialState: FormState = { name: '', description: '' };
+
 const TodoScreen = () => {
   const [formState, setFormState] = useState<FormState>(initialState);
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -46,8 +47,7 @@ const TodoScreen = () => {
 
   async function fetchTodos() {
     try {
-      const fetched = await API.get('TodoAPI', '/todos');
-      setTodos(fetched);
+
     } catch (err) {
       console.log('error fetching todos:', err);
     }
@@ -59,6 +59,7 @@ const TodoScreen = () => {
       const todo = { ...formState };
       await API.post('TodoAPI', '/todos', { body: todo });
       setFormState(initialState);
+
       // Refresh the list after adding
       fetchTodos();
     } catch (err) {
