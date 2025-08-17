@@ -4,6 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from './App';
 import { useNavigation } from '@react-navigation/native';
 import { signIn, fetchAuthSession } from 'aws-amplify/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type LogInNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -147,11 +148,26 @@ export default function LogIn() {
       const { isSignedIn } = await signIn({ username: email, password });
       
       console.log('SignIn result:', { isSignedIn });
-      
+
       if (isSignedIn) {
+        // Fetch the current session to get tokens
+        const session = await fetchAuthSession();
+        const idToken = session.tokens?.idToken?.toString();
+
+        if (idToken) {
+          try {
+            await AsyncStorage.setItem('idToken', idToken);
+            console.log('ID token stored successfully');
+          } catch (storageError) {
+            console.error('Error storing ID token:', storageError);
+          }
+        } else {
+          console.log('No ID token returned from session');
+        }
+
         // User is successfully authenticated and in Cognito pool
         console.log('Login successful, navigating to Dashboard...');
-        
+
         // Navigate directly to Dashboard
         console.log('Attempting to navigate to Dashboard...');
         navigation.navigate('Dashboard');
