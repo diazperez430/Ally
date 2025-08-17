@@ -352,14 +352,14 @@ export default function SignUp() {
                 <Pressable
                   style={[
                     styles.genderOption,
-                    gender === 'Masculine' && styles.genderOptionSelected
+                    gender === 'Male' && styles.genderOptionSelected
                   ]}
-                  onPress={() => setGender('Masculine')}
+                  onPress={() => setGender('Male')}
                 >
                   <Text style={[
                     styles.genderOptionText,
-                    gender === 'Masculine' && styles.genderOptionTextSelected
-                  ]}>Masculine</Text>
+                    gender === 'Male' && styles.genderOptionTextSelected
+                  ]}>Male</Text>
                 </Pressable>
                 <Pressable
                   style={[

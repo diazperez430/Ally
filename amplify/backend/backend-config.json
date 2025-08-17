@@ -1,5 +1,20 @@
 {
-  "api": {},
+  "api": {
+    "todoapi": {
+      "dependsOn": [
+        {
+          "attributes": [
+            "Name",
+            "Arn"
+          ],
+          "category": "function",
+          "resourceName": "todoFunction"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "API Gateway"
+    }
+  },
   "auth": {
     "allyd2fd21f7": {
       "customAuth": false,
@@ -26,6 +41,31 @@
       },
       "providerPlugin": "awscloudformation",
       "service": "Cognito"
+    }
+  },
+  "function": {
+    "todoFunction": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    }
+  },
+  "parameters": {
+    "AMPLIFY_function_todoFunction_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "todoFunction"
+        }
+      ]
+    },
+    "AMPLIFY_function_todoFunction_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "todoFunction"
+        }
+      ]
     }
   },
   "storage": {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -10,8 +10,8 @@ import {
   Dimensions
 } from 'react-native';
 
-
-import { post, get } from 'aws-amplify/api';
+import { useTodos } from './src/hooks/useApi';
+import type { Todo } from './src/services/api';
 
 
 
@@ -24,56 +24,31 @@ const scale = (size: number): number => {
   return Math.round(size * scaleFactor);
 };
 
-interface Todo {
-  id?: string;
-  name: string;
-  description?: string | null;
-}
-
 interface FormState {
   name: string;
   description: string;
 }
 
 const initialState: FormState = { name: '', description: '' };
+
 const TodoScreen = () => {
   const [formState, setFormState] = useState<FormState>(initialState);
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const { todos, loading, error, fetchTodos, createTodo } = useTodos();
 
-  useEffect(() => {
+  React.useEffect(() => {
     fetchTodos();
-  }, []);
+  }, [fetchTodos]);
 
   function setInput(key: keyof FormState, value: string) {
     setFormState({ ...formState, [key]: value });
   }
 
-  async function fetchTodos() {
-    try {
-      const response = await get({
-        apiName: 'TodoAPI',
-        path: '/todos'
-      });
-      setTodos(response.body || []);
-    } catch (err) {
-      console.log('error fetching todos:', err);
-    }
-  }
-
   async function addTodo() {
     try {
       if (!formState.name || !formState.description) return;
-      const todo = { ...formState };
-      await post({
-        apiName: 'TodoAPI',
-        path: '/todos',
-        options: {
-          body: todo
-        }
-      });
+      const todo = { name: formState.name, description: formState.description };
+      await createTodo(todo);
       setFormState(initialState);
-      // Refresh the list after adding
-      fetchTodos();
     } catch (err) {
       console.log('error creating todo:', err);
     }
@@ -109,7 +84,7 @@ const TodoScreen = () => {
 
           <View style={styles.todosContainer}>
             <Text style={styles.sectionTitle}>Your Todos</Text>
-            {todos.map((todo, index) => (
+            {(todos || []).map((todo, index) => (
               <View key={todo.id ? todo.id : index} style={styles.todo}>
                 <Text style={styles.todoName}>{todo.name}</Text>
                 <Text style={styles.todoDescription}>{todo.description}</Text>

@@ -9,7 +9,8 @@
       "UnauthRoleName": "amplify-ally-dev-22b40-unauthRole",
       "StackName": "amplify-ally-dev-22b40",
       "StackId": "arn:aws:cloudformation:ap-southeast-2:055029754222:stack/amplify-ally-dev-22b40/a2766110-6f96-11f0-b599-02847e3c8823",
-      "AmplifyAppId": "d10rtdqwjzn1wt"
+      "AmplifyAppId": "d10rtdqwjzn1wt",
+      "APIGatewayAuthURL": "https://s3.amazonaws.com/amplify-ally-dev-22b40-deployment/amplify-cfn-templates/api/APIGatewayAuthStack.json"
     },
     "categories": {
       "storage": {
@@ -18,6 +19,15 @@
       "auth": {
         "allyAuth": {},
         "allyd2fd21f7": {}
+      },
+      "function": {
+        "todoFunction": {
+          "deploymentBucketName": "amplify-ally-dev-22b40-deployment",
+          "s3Key": "amplify-builds/todoFunction-656c357a686d2f6f574e-build.zip"
+        }
+      },
+      "api": {
+        "todoapi": {}
       }
     }
   }
