@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, SafeAreaView, ScrollView, Animated, Pressable, TextInput, Alert, Vibration } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, Platform, StatusBar, 
+  SafeAreaView, ScrollView, Animated, Pressable, TextInput, Alert, Vibration } from 'react-native';
 import { RouteProp, useRoute, useNavigation } from '@react-navigation/native';
 import { RootStackParamList } from './App';
 import { Ionicons } from '@expo/vector-icons';
