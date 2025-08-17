@@ -4,6 +4,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from './App';
 import { fetchAuthSession, signIn, signOut } from 'aws-amplify/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type OAuthNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -129,16 +130,9 @@ export default function OAuthHandler() {
 
   const storeTokens = async (tokens: OAuthTokens) => {
     try {
-      // Store tokens securely
-      // You can use @react-native-async-storage/async-storage or expo-secure-store
-      console.log('Storing tokens securely...');
-      
-      // For now, we'll just log them (in production, use secure storage)
-      console.log('Access Token:', tokens.accessToken.substring(0, 20) + '...');
-      console.log('ID Token:', tokens.idToken.substring(0, 20) + '...');
-      console.log('Refresh Token:', tokens.refreshToken.substring(0, 20) + '...');
-      console.log('Expires In:', new Date(tokens.expiresIn));
-      
+      await AsyncStorage.setItem('accessToken', tokens.accessToken);
+      await AsyncStorage.setItem('idToken', tokens.idToken);
+      console.log('Tokens stored');
     } catch (error) {
       console.error('Token storage error:', error);
     }
