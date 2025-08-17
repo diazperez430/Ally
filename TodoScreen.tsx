@@ -9,9 +9,7 @@ import {
   ScrollView,
   Dimensions
 } from 'react-native';
-import { generateClient } from 'aws-amplify/api';
-import { createTodo } from './src/graphql/mutations';
-import { listTodos } from './src/graphql/queries';
+import { API } from 'aws-amplify';
 
 const { width: screenWidth } = Dimensions.get('window');
 const isTablet = screenWidth >= 768;
@@ -34,7 +32,6 @@ interface FormState {
 }
 
 const initialState: FormState = { name: '', description: '' };
-const client = generateClient();
 
 const TodoScreen = () => {
   const [formState, setFormState] = useState<FormState>(initialState);
@@ -50,11 +47,8 @@ const TodoScreen = () => {
 
   async function fetchTodos() {
     try {
-      const todoData = await client.graphql({
-        query: listTodos
-      });
-      const todos = todoData.data.listTodos.items;
-      setTodos(todos);
+      const todoData: Todo[] = await API.get('restapi', '/todos');
+      setTodos(todoData);
     } catch (err) {
       console.log('error fetching todos:', err);
     }
@@ -66,11 +60,8 @@ const TodoScreen = () => {
       const todo = { ...formState };
       setTodos([...todos, todo]);
       setFormState(initialState);
-      await client.graphql({
-        query: createTodo,
-        variables: {
-          input: todo
-        }
+      await API.post('restapi', '/todos', {
+        body: todo
       });
       // Refresh the list after adding
       fetchTodos();
