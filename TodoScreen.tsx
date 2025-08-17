@@ -9,7 +9,10 @@ import {
   ScrollView,
   Dimensions
 } from 'react-native';
-import { API }  from 'aws-amplify';
+
+
+import { post, get } from 'aws-amplify/api';
+
 
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -33,8 +36,6 @@ interface FormState {
 }
 
 const initialState: FormState = { name: '', description: '' };
-
-
 const TodoScreen = () => {
   const [formState, setFormState] = useState<FormState>(initialState);
   const [todos, setTodos] = useState<Todo[]>([]);
@@ -49,8 +50,11 @@ const TodoScreen = () => {
 
   async function fetchTodos() {
     try {
-      const todoData= await API.get('TodoAPI', '/todos');
-      setTodos(fetched);	
+      const response = await get({
+        apiName: 'TodoAPI',
+        path: '/todos'
+      });
+      setTodos(response.body || []);
     } catch (err) {
       console.log('error fetching todos:', err);
     }
@@ -60,10 +64,14 @@ const TodoScreen = () => {
     try {
       if (!formState.name || !formState.description) return;
       const todo = { ...formState };
+      await post({
+        apiName: 'TodoAPI',
+        path: '/todos',
+        options: {
+          body: todo
+        }
+      });
       setFormState(initialState);
-      await API.post('TodoAPI','/todos',{ body: todo});
-      setFormState(initialSatate);
-    
       // Refresh the list after adding
       fetchTodos();
     } catch (err) {
